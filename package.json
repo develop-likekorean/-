@@ -1,0 +1,65 @@
+{
+  "name": "bbaekkom-index",
+  "version": "1.0.0",
+  "description": "빼꼼 인덱스 - 모니터 가장자리에 빼꼼 튀어나오는 디지털 메모 인덱스",
+  "main": "main.js",
+  "author": "made in people",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build": "electron-builder -mw"
+  },
+  "build": {
+    "appId": "com.madeinpeople.bbaekkom",
+    "productName": "빼꼼 인덱스",
+    "copyright": "Copyright © 2026 made in people",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "renderer.js",
+      "styles.css",
+      "icon.png",
+      "icon.ico",
+      "icon.icns"
+    ],
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["universal"] }
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "icon.icns",
+      "identity": null
+    },
+    "dmg": {
+      "title": "빼꼼 인덱스 설치",
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "win": {
+      "target": [
+        { "target": "nsis" }
+      ],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "빼꼼 인덱스"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}

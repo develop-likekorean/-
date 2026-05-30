@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>빼꼼 인덱스</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="collapsed">
+    <!-- 펼쳐지는 패널 -->
+    <section id="panel">
+      <div id="panel-inner">
+
+        <!-- 메모 편집 화면 -->
+        <div id="note-view">
+          <header class="panel-header">
+            <input id="note-title" type="text" placeholder="제목 (선택)" maxlength="20" />
+            <button id="btn-pin" class="icon-btn" title="고정">📌</button>
+            <button id="btn-collapse" class="icon-btn" title="접기">›</button>
+          </header>
+
+          <div id="color-row"></div>
+
+          <textarea id="note-body" placeholder="여기에 메모를 적어보세요..."></textarea>
+
+          <footer class="panel-footer">
+            <button id="btn-delete" class="ghost danger">이 메모 삭제</button>
+            <span id="save-status">저장됨</span>
+          </footer>
+        </div>
+
+        <!-- 설정 화면 -->
+        <div id="settings-view" class="hidden">
+          <header class="panel-header">
+            <h2>설정</h2>
+            <button id="btn-settings-close" class="icon-btn" title="닫기">›</button>
+          </header>
+
+          <div class="setting-block">
+            <p class="setting-title">동작 모드</p>
+
+            <label class="mode-option">
+              <input type="radio" name="mode" value="auto" />
+              <span>
+                <b>자동 최소화</b>
+                <small>인덱스 바깥을 클릭하면 자동으로 접혀요. 📌 핀을 누르면 고정됩니다.</small>
+              </span>
+            </label>
+
+            <label class="mode-option">
+              <input type="radio" name="mode" value="always" />
+              <span>
+                <b>항상 열림</b>
+                <small>직접 접기 전까지 계속 펼쳐져 있어요.</small>
+              </span>
+            </label>
+          </div>
+
+          <div class="setting-block">
+            <label class="toggle-row">
+              <input type="checkbox" id="chk-autolaunch" />
+              <span>컴퓨터 켤 때 자동으로 실행</span>
+            </label>
+          </div>
+
+          <div class="setting-block">
+            <button id="btn-quit" class="ghost danger">빼꼼 인덱스 종료</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 항상 보이는 탭 기둥 -->
+    <nav id="tabs"></nav>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

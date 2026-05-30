@@ -1,0 +1,66 @@
+name: 빼꼼 인덱스 빌드
+
+# 실행 시점:
+#  - GitHub 사이트의 Actions 탭에서 "Run workflow" 버튼으로 수동 실행
+#  - main 브랜치에 코드가 올라올 때 자동 실행
+#  - v1.0.0 같은 태그를 올리면 자동 실행 + 릴리스에 파일 첨부
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+jobs:
+  # ---------- 윈도우 설치파일(.exe) ----------
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 필요한 파일 설치
+        run: npm install
+      - name: 윈도우 앱 빌드
+        run: npm run build:win
+      - name: 완성파일 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: dist/*.exe
+
+  # ---------- 맥 설치파일(.dmg) ----------
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 필요한 파일 설치
+        run: npm install
+      - name: 맥 앱 빌드
+        run: npm run build:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: 완성파일 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-dmg
+          path: dist/*.dmg
+
+  # ---------- 태그(vX.X.X)로 올릴 때만: 릴리스에 자동 첨부 ----------
+  release:
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: 릴리스 만들기
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

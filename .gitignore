@@ -1,0 +1,6 @@
+node_modules/
+dist/
+package-lock.json
+.platform-mac
+.platform-win
+.DS_Store
