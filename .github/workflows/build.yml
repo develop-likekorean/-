@@ -7,7 +7,7 @@ name: 빼꼼 인덱스 빌드
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, master]
     tags: ['v*']
 
 jobs:
