@@ -2,13 +2,12 @@ const { app, BrowserWindow, screen, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-// 창 너비: 접혔을 때(탭만 보임) / 펼쳤을 때(메모 패널 보임)
 const COLLAPSED_WIDTH = 54;
-const EXPANDED_WIDTH = 400;
 
 let win = null;
 let tray = null;
-let isExpanded = false;
+let currentSide = 'right';
+let lastWidth = COLLAPSED_WIDTH;
 
 function notesFilePath() {
   return path.join(app.getPath('userData'), 'notes.json');
@@ -17,13 +16,11 @@ function settingsFilePath() {
   return path.join(app.getPath('userData'), 'settings.json');
 }
 
-// 처음 켰을 때 기본값: 메모 1개만
 function defaultNotes() {
-  return [{ id: 't1', title: '', color: '#FFE08A', body: '' }];
+  return [{ id: 't1', title: '', color: '#FFE08A', body: '', url: '' }];
 }
-
 function defaultSettings() {
-  return { mode: 'auto', pinned: false, autoLaunch: false };
+  return { mode: 'auto', pinned: false, autoLaunch: false, side: 'right' };
 }
 
 function loadNotes() {
@@ -35,7 +32,6 @@ function loadNotes() {
     return defaultNotes();
   }
 }
-
 function saveNotes(notes) {
   try {
     fs.writeFileSync(notesFilePath(), JSON.stringify(notes, null, 2), 'utf-8');
@@ -45,7 +41,6 @@ function saveNotes(notes) {
     return false;
   }
 }
-
 function loadSettings() {
   try {
     return Object.assign(defaultSettings(), JSON.parse(fs.readFileSync(settingsFilePath(), 'utf-8')));
@@ -53,7 +48,6 @@ function loadSettings() {
     return defaultSettings();
   }
 }
-
 function saveSettings(settings) {
   try {
     fs.writeFileSync(settingsFilePath(), JSON.stringify(settings, null, 2), 'utf-8');
@@ -64,17 +58,14 @@ function saveSettings(settings) {
   }
 }
 
-// 창을 화면 오른쪽 가장자리에 붙임
+// 창을 화면 왼쪽/오른쪽 가장자리에 붙임
 function positionWindow(width) {
   if (!win) return;
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   const area = display.workArea;
-  win.setBounds({
-    x: area.x + area.width - width,
-    y: area.y,
-    width: width,
-    height: area.height
-  });
+  const x = currentSide === 'left' ? area.x : area.x + area.width - width;
+  win.setBounds({ x, y: area.y, width, height: area.height });
+  lastWidth = width;
 }
 
 function createWindow() {
@@ -95,24 +86,23 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      webviewTag: true
     }
   });
 
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setAlwaysOnTop(true, 'screen-saver');
 
+  currentSide = loadSettings().side || 'right';
   positionWindow(COLLAPSED_WIDTH);
   win.loadFile('index.html');
 
-  // 바깥을 클릭해 창이 포커스를 잃으면 렌더러에 알림 (자동 최소화 모드용)
   win.on('blur', () => {
     if (win && !win.isDestroyed()) win.webContents.send('window-blur');
   });
 
-  screen.on('display-metrics-changed', () => {
-    positionWindow(isExpanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH);
-  });
+  screen.on('display-metrics-changed', () => positionWindow(lastWidth));
 }
 
 // ---- 렌더러와의 통신 ----
@@ -125,26 +115,21 @@ ipcMain.handle('save-settings', (_e, settings) => {
   return true;
 });
 
-ipcMain.on('expand', () => {
-  isExpanded = true;
-  positionWindow(EXPANDED_WIDTH);
+// 위치(좌/우)와 너비를 한 번에 적용
+ipcMain.on('set-layout', (_e, payload) => {
+  const { side, width } = payload || {};
+  currentSide = side || 'right';
+  positionWindow(width || COLLAPSED_WIDTH);
 });
-ipcMain.on('collapse', () => {
-  isExpanded = false;
-  positionWindow(COLLAPSED_WIDTH);
-});
+
 ipcMain.on('quit-app', () => app.quit());
 
-// 로그인 시 자동 실행 설정 (맥/윈도우 공통)
 function applyAutoLaunch(enabled) {
   try {
     app.setLoginItemSettings({ openAtLogin: !!enabled });
-  } catch (e) {
-    // 일부 환경(개발 모드 등)에서는 무시
-  }
+  } catch (e) {}
 }
 
-// ---- 트레이 아이콘 ----
 function createTray() {
   try {
     const iconPath = path.join(__dirname, 'icon.png');
@@ -163,7 +148,6 @@ function createTray() {
 app.whenReady().then(() => {
   createWindow();
   createTray();
-  // 저장된 자동 실행 설정 반영
   applyAutoLaunch(loadSettings().autoLaunch);
 
   app.on('activate', () => {

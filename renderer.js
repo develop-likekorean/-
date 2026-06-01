@@ -1,20 +1,18 @@
 // ===== 빼꼼 인덱스 - 화면 로직 =====
 
 const PALETTE = [
-  '#FFE08A', // 노랑
-  '#F7B5C4', // 핑크
-  '#A8D8EA', // 하늘
-  '#B5E7A0', // 연두
-  '#FFC9A3', // 살구
-  '#D6C8F0', // 라벤더
-  '#FFFFFF'  // 흰색
+  '#FFE08A', '#F7B5C4', '#A8D8EA', '#B5E7A0', '#FFC9A3', '#D6C8F0', '#FFFFFF'
 ];
 
+const COLLAPSED_W = 54;
+const MEMO_W = 400;   // 메모 펼침 너비
+const LINK_W = 600;   // 링크(웹페이지) 펼침 너비 — 더 넓게
+
 let notes = [];
-let settings = { mode: 'auto', pinned: false, autoLaunch: false };
+let settings = { mode: 'auto', pinned: false, autoLaunch: false, side: 'right' };
 let activeId = null;
 let view = 'note'; // 'note' | 'settings'
-let ignoreBlur = false; // 다이얼로그 등으로 인한 blur 무시용
+let ignoreBlur = false;
 
 const app = document.getElementById('app');
 const tabsEl = document.getElementById('tabs');
@@ -22,9 +20,14 @@ const noteView = document.getElementById('note-view');
 const settingsView = document.getElementById('settings-view');
 const titleEl = document.getElementById('note-title');
 const bodyEl = document.getElementById('note-body');
+const urlEl = document.getElementById('note-url');
+const webEl = document.getElementById('note-web');
+const clearUrlBtn = document.getElementById('btn-clear-url');
 const colorRow = document.getElementById('color-row');
 const saveStatus = document.getElementById('save-status');
 const btnPin = document.getElementById('btn-pin');
+const btnCollapse = document.getElementById('btn-collapse');
+const btnSettingsClose = document.getElementById('btn-settings-close');
 const panelInner = document.getElementById('panel-inner');
 
 // ---------- 초기화 ----------
@@ -32,15 +35,37 @@ async function init() {
   settings = await window.api.getSettings();
   notes = await window.api.getNotes();
   buildColorSwatches();
+  applySideClass();
   applySettingsUI();
   renderTabs();
-  collapse(); // 시작은 접힌 상태 (저장된 탭 개수 그대로 보임)
+  collapse();
+}
+
+function applySideClass() {
+  app.classList.toggle('side-left', settings.side === 'left');
+  app.classList.toggle('side-right', settings.side !== 'left');
+  const arrow = settings.side === 'left' ? '‹' : '›';
+  btnCollapse.textContent = arrow;
+  btnSettingsClose.textContent = arrow;
+}
+
+// ---------- 레이아웃(창 위치/너비) ----------
+function applyLayout() {
+  let width = COLLAPSED_W;
+  if (app.classList.contains('expanded')) {
+    if (view === 'note') {
+      const n = currentNote();
+      width = (n && n.url && n.url.trim()) ? LINK_W : MEMO_W;
+    } else {
+      width = MEMO_W;
+    }
+  }
+  window.api.setLayout(settings.side, width);
 }
 
 // ---------- 탭 그리기 ----------
 function renderTabs() {
   tabsEl.innerHTML = '';
-
   notes.forEach((note, i) => {
     const tab = document.createElement('button');
     tab.className = 'tab' + (note.id === activeId ? ' active' : '');
@@ -52,7 +77,6 @@ function renderTabs() {
     tabsEl.appendChild(tab);
   });
 
-  // + 추가 버튼
   const addBtn = document.createElement('button');
   addBtn.className = 'tab-add';
   addBtn.textContent = '+';
@@ -60,7 +84,6 @@ function renderTabs() {
   addBtn.addEventListener('click', addNote);
   tabsEl.appendChild(addBtn);
 
-  // 아래 여백 + 설정 버튼
   const spacer = document.createElement('div');
   spacer.className = 'spacer';
   tabsEl.appendChild(spacer);
@@ -109,9 +132,34 @@ function loadIntoPanel(id) {
   const note = notes.find((n) => n.id === id);
   if (!note) return;
   titleEl.value = note.title || '';
+  urlEl.value = note.url || '';
   bodyEl.value = note.body || '';
   markSelectedSwatch(note.color);
   panelInner.style.setProperty('--accent', note.color);
+  renderContent(note);
+}
+
+function normalizeUrl(u) {
+  u = u.trim();
+  if (!u) return '';
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  return u;
+}
+
+// 링크가 있으면 웹페이지, 없으면 메모 textarea
+function renderContent(note) {
+  const hasUrl = note.url && note.url.trim();
+  clearUrlBtn.classList.toggle('hidden', !hasUrl);
+  if (hasUrl) {
+    bodyEl.classList.add('hidden');
+    webEl.classList.remove('hidden');
+    const u = normalizeUrl(note.url);
+    if (webEl.getAttribute('src') !== u) webEl.setAttribute('src', u);
+  } else {
+    webEl.classList.add('hidden');
+    webEl.removeAttribute('src');
+    bodyEl.classList.remove('hidden');
+  }
 }
 
 function showNoteView() {
@@ -123,15 +171,17 @@ function showNoteView() {
 function expand() {
   app.classList.remove('collapsed');
   app.classList.add('expanded');
-  window.api.expand();
+  applyLayout();
 }
 function collapse() {
-  saveNow(); // 접기 전 반드시 저장
+  saveNow();
   app.classList.remove('expanded');
   app.classList.add('collapsed');
   activeId = null;
   view = 'note';
-  window.api.collapse();
+  webEl.classList.add('hidden');
+  webEl.removeAttribute('src'); // 웹페이지 정지
+  applyLayout();
   renderTabs();
 }
 
@@ -164,11 +214,40 @@ bodyEl.addEventListener('input', () => {
   saveNow();
 });
 
+// 링크: 입력 중엔 저장만, 다 입력하면(엔터/포커스 해제) 페이지 띄우고 너비 조정
+urlEl.addEventListener('input', () => {
+  const note = currentNote();
+  if (!note) return;
+  note.url = urlEl.value;
+  clearUrlBtn.classList.toggle('hidden', !urlEl.value.trim());
+  saveNow();
+});
+urlEl.addEventListener('change', applyUrl);
+urlEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyUrl(); urlEl.blur(); } });
+
+function applyUrl() {
+  const note = currentNote();
+  if (!note) return;
+  renderContent(note);
+  applyLayout(); // 메모↔링크 너비 전환
+}
+
+clearUrlBtn.addEventListener('click', () => {
+  const note = currentNote();
+  if (!note) return;
+  note.url = '';
+  urlEl.value = '';
+  renderContent(note);
+  applyLayout();
+  saveNow();
+  urlEl.focus();
+});
+
 // ---------- 추가 / 삭제 ----------
 function addNote() {
   const id = 't' + Date.now();
   const color = PALETTE[notes.length % PALETTE.length];
-  const note = { id, title: '', color, body: '' };
+  const note = { id, title: '', color, body: '', url: '' };
   notes.push(note);
   activeId = id;
   view = 'note';
@@ -188,14 +267,13 @@ document.getElementById('btn-delete').addEventListener('click', () => {
   if (!confirm(`"${label}" 를 삭제할까요?`)) return;
   notes = notes.filter((n) => n.id !== note.id);
   if (notes.length === 0) {
-    // 최소 1개는 유지
-    notes.push({ id: 't' + Date.now(), title: '', color: '#FFE08A', body: '' });
+    notes.push({ id: 't' + Date.now(), title: '', color: '#FFE08A', body: '', url: '' });
   }
   saveNow();
   collapse();
 });
 
-document.getElementById('btn-collapse').addEventListener('click', collapse);
+btnCollapse.addEventListener('click', collapse);
 
 // ---------- 핀 ----------
 btnPin.addEventListener('click', () => {
@@ -209,16 +287,26 @@ function openSettings() {
   view = 'settings';
   noteView.classList.add('hidden');
   settingsView.classList.remove('hidden');
+  webEl.classList.add('hidden');
   applySettingsUI();
   expand();
 }
-document.getElementById('btn-settings-close').addEventListener('click', collapse);
+btnSettingsClose.addEventListener('click', collapse);
 
 document.querySelectorAll('input[name="mode"]').forEach((radio) => {
   radio.addEventListener('change', () => {
     settings.mode = radio.value;
     if (settings.mode === 'always') settings.pinned = false;
     applySettingsUI();
+    saveSettingsNow();
+  });
+});
+
+document.querySelectorAll('input[name="side"]').forEach((radio) => {
+  radio.addEventListener('change', () => {
+    settings.side = radio.value;
+    applySideClass();
+    applyLayout(); // 즉시 위치 이동
     saveSettingsNow();
   });
 });
@@ -234,13 +322,9 @@ document.getElementById('btn-quit').addEventListener('click', () => {
 });
 
 function applySettingsUI() {
-  // 모드 라디오
-  document.querySelectorAll('input[name="mode"]').forEach((r) => {
-    r.checked = r.value === settings.mode;
-  });
-  // 자동 실행
+  document.querySelectorAll('input[name="mode"]').forEach((r) => { r.checked = r.value === settings.mode; });
+  document.querySelectorAll('input[name="side"]').forEach((r) => { r.checked = r.value === settings.side; });
   document.getElementById('chk-autolaunch').checked = !!settings.autoLaunch;
-  // 핀 버튼: 항상 열림 모드에서는 의미 없으므로 숨김
   if (settings.mode === 'always') {
     btnPin.classList.add('hidden');
   } else {
@@ -254,11 +338,8 @@ function applySettingsUI() {
 window.api.onWindowBlur(() => {
   if (ignoreBlur) return;
   if (!app.classList.contains('expanded')) return;
-  if (settings.mode === 'auto' && !settings.pinned) {
-    collapse();
-  }
+  if (settings.mode === 'auto' && !settings.pinned) collapse();
 });
-
 function guardBlur() {
   ignoreBlur = true;
   setTimeout(() => { ignoreBlur = false; }, 500);
@@ -274,5 +355,4 @@ async function saveSettingsNow() {
   await window.api.saveSettings(settings);
 }
 
-// 시작
 init();

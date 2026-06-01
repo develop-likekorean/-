@@ -5,8 +5,7 @@ contextBridge.exposeInMainWorld('api', {
   saveNotes: (notes) => ipcRenderer.invoke('save-notes', notes),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
-  expand: () => ipcRenderer.send('expand'),
-  collapse: () => ipcRenderer.send('collapse'),
+  setLayout: (side, width) => ipcRenderer.send('set-layout', { side, width }),
   quit: () => ipcRenderer.send('quit-app'),
   onWindowBlur: (cb) => ipcRenderer.on('window-blur', cb)
 });
