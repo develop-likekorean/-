@@ -15,6 +15,7 @@
     "appId": "com.madeinpeople.bbaekkom",
     "productName": "빼꼼 인덱스",
     "copyright": "Copyright © 2026 made in people",
+    "afterPack": "build/after-pack.js",
     "files": [
       "main.js",
       "preload.js",
