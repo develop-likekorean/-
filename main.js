@@ -3,12 +3,13 @@ const path = require('path');
 const fs = require('fs');
 
 const COLLAPSED_WIDTH = 44; // 기본(보통) 너비, 시작 한 프레임용 폴백
-const SIZE_COL = { large: 54, medium: 44, small: 36 };
+const SIZE_COL = { large: 54, medium: 44, small: 36, mini: 22 };
 
 let win = null;
 let tray = null;
 let currentSide = 'right';
 let lastWidth = COLLAPSED_WIDTH;
+let suppressBlur = false;
 
 function notesFilePath() {
   return path.join(app.getPath('userData'), 'notes.json');
@@ -105,6 +106,7 @@ function createWindow() {
   win.setIgnoreMouseEvents(true, { forward: true });
 
   win.on('blur', () => {
+    if (suppressBlur) return;
     if (win && !win.isDestroyed()) win.webContents.send('window-blur');
   });
 
@@ -124,8 +126,17 @@ ipcMain.handle('save-settings', (_e, settings) => {
 // 위치(좌/우)와 너비를 한 번에 적용
 ipcMain.on('set-layout', (_e, payload) => {
   const { side, width } = payload || {};
-  currentSide = side || 'right';
+  const newSide = side || 'right';
+  const sideChanged = newSide !== currentSide;
+  currentSide = newSide;
   positionWindow(width || COLLAPSED_WIDTH);
+  // 윈도우에서 투명 창을 반대편으로 옮기면 이전 위치에 잔상(고스트)이 남는 문제 방지
+  if (sideChanged && process.platform === 'win32' && win && !win.isDestroyed()) {
+    suppressBlur = true;
+    win.hide();
+    win.show();
+    setTimeout(() => { suppressBlur = false; }, 250);
+  }
 });
 
 // 빈 영역 클릭 통과 토글 (true = 통과, false = 입력 받음)

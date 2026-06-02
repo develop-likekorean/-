@@ -4,7 +4,7 @@ const PALETTE = [
   '#FFE08A', '#F7B5C4', '#A8D8EA', '#B5E7A0', '#FFC9A3', '#D6C8F0', '#FFFFFF'
 ];
 
-const SIZE_COL = { large: 54, medium: 44, small: 36 }; // 접혔을 때(탭 기둥) 너비
+const SIZE_COL = { large: 54, medium: 44, small: 36, mini: 22 }; // 접혔을 때(탭 기둥) 너비
 const MIN_W = 240, MAX_W = 1000;   // 패널 너비 한계
 const MIN_H = 150;                 // 패널 높이 최소
 // 새 메모 기본 크기(작게). 메모마다 따로 저장됨. (0 = 전체 높이)
@@ -62,7 +62,7 @@ function applySideClass() {
 }
 
 function applySizeClass() {
-  app.classList.remove('size-large', 'size-medium', 'size-small');
+  app.classList.remove('size-large', 'size-medium', 'size-small', 'size-mini');
   app.classList.add('size-' + (settings.size || 'medium'));
 }
 
@@ -109,8 +109,11 @@ function renderTabs() {
     tab.style.background = note.color;
     const full = note.title && note.title.trim() ? note.title : String(i + 1);
     const isActive = note.id === activeId;
-    // 8글자 이상이면 앞부분만(…), 활성화된 탭은 전체 표시
-    const label = (!isActive && full.length > 8) ? full.slice(0, 8) + '…' : full;
+    // 최소화 모드: 색만, 글자 없음. 그 외엔 8글자 이상이면 앞부분만(…), 활성 탭은 전체
+    let label = '';
+    if (settings.size !== 'mini') {
+      label = (!isActive && full.length > 8) ? full.slice(0, 8) + '…' : full;
+    }
     tab.textContent = label;
     tab.title = full;
     tab.addEventListener('click', () => onTabClick(note.id));
@@ -121,9 +124,11 @@ function renderTabs() {
       dragSrcId = note.id;
       e.dataTransfer.effectAllowed = 'move';
       tab.classList.add('dragging');
+      setIgnoreMouse(false); // 드래그 동안 입력 통과 끔
     });
     tab.addEventListener('dragend', () => {
       tab.classList.remove('dragging');
+      dragSrcId = null;
       document.querySelectorAll('.tab.drag-over').forEach((t) => t.classList.remove('drag-over'));
     });
     tab.addEventListener('dragover', (e) => {
@@ -552,6 +557,7 @@ function setIgnoreMouse(ignore) {
 // 마우스가 실제 스티커(탭)나 펼친 패널 위에 있을 때만 입력을 받음
 const INTERACTIVE = '.tab, .tab-add, .tab-gear, #panel-inner';
 document.addEventListener('mousemove', (e) => {
+  if (dragSrcId || resizing || vResizing) { setIgnoreMouse(false); return; } // 드래그/리사이즈 중엔 통과 끔
   if (app.classList.contains('expanded')) { setIgnoreMouse(false); return; }
   const onContent = e.target && e.target.closest && e.target.closest(INTERACTIVE);
   setIgnoreMouse(!onContent);

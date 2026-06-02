@@ -17,6 +17,7 @@
 #app.size-large  { --tab-col: 54px; --tab-w: 46px; --tab-h: 78px; --tab-font: 14px; --tab-add-h: 46px; --tab-gear: 32px; }
 #app.size-medium { --tab-col: 44px; --tab-w: 38px; --tab-h: 64px; --tab-font: 13px; --tab-add-h: 40px; --tab-gear: 30px; }
 #app.size-small  { --tab-col: 36px; --tab-w: 30px; --tab-h: 52px; --tab-font: 11px; --tab-add-h: 34px; --tab-gear: 28px; }
+#app.size-mini   { --tab-col: 22px; --tab-w: 16px; --tab-h: 34px; --tab-font: 11px; --tab-add-h: 22px; --tab-gear: 22px; }
 
 html, body {
   width: 100%;
@@ -209,6 +210,7 @@ html, body {
   flex-direction: column;
   height: 100%;
 }
+#settings-view { overflow-y: auto; }
 
 .panel-header {
   display: flex;
@@ -387,30 +389,30 @@ html, body {
 
 /* ---------- 설정 ---------- */
 .setting-block {
-  margin-bottom: 18px;
-  padding-bottom: 16px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
   border-bottom: 1px solid #eee5d6;
 }
 .setting-block:last-child { border-bottom: none; }
 .setting-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #8a8170;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
 .mode-option {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 10px;
+  gap: 8px;
+  padding: 5px 7px;
+  border-radius: 8px;
   cursor: pointer;
-  margin-bottom: 6px;
+  margin-bottom: 1px;
 }
 .mode-option:hover { background: #f6f1e7; }
-.mode-option input { margin-top: 3px; }
-.mode-option b { display: block; font-size: 14px; color: #3a3328; }
-.mode-option small { display: block; font-size: 12px; color: #9a917f; line-height: 1.4; margin-top: 3px; }
+.mode-option input { margin-top: 2px; }
+.mode-option b { display: block; font-size: 13px; color: #3a3328; }
+.mode-option small { display: block; font-size: 11px; color: #9a917f; line-height: 1.35; margin-top: 1px; }
 
 .toggle-row {
   display: flex;
