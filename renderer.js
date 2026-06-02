@@ -215,6 +215,7 @@ function expand() {
   app.classList.remove('collapsed');
   app.classList.add('expanded');
   applyLayout();
+  setIgnoreMouse(false); // 펼치면 패널 전체가 입력을 받음
 }
 function collapse() {
   saveNow();
@@ -225,6 +226,7 @@ function collapse() {
   webEl.classList.add('hidden');
   webEl.removeAttribute('src'); // 웹페이지 정지
   applyLayout();
+  setIgnoreMouse(true); // 접으면 빈 영역은 클릭 통과
   renderTabs();
 }
 
@@ -397,6 +399,21 @@ function guardBlur() {
   ignoreBlur = true;
   setTimeout(() => { ignoreBlur = false; }, 500);
 }
+
+// ---------- 빈 영역 클릭 통과 (실제 탭/패널 위에서만 입력 받기) ----------
+let curIgnore = null;
+function setIgnoreMouse(ignore) {
+  if (ignore === curIgnore) return;
+  curIgnore = ignore;
+  window.api.setIgnoreMouse(ignore);
+}
+// 마우스가 실제 스티커(탭)나 펼친 패널 위에 있을 때만 입력을 받음
+const INTERACTIVE = '.tab, .tab-add, .tab-gear, #panel-inner';
+document.addEventListener('mousemove', (e) => {
+  if (app.classList.contains('expanded')) { setIgnoreMouse(false); return; }
+  const onContent = e.target && e.target.closest && e.target.closest(INTERACTIVE);
+  setIgnoreMouse(!onContent);
+});
 
 // ---------- 저장 (즉시) ----------
 async function saveNow() {

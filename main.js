@@ -100,6 +100,10 @@ function createWindow() {
   positionWindow(SIZE_COL[s.size] || COLLAPSED_WIDTH);
   win.loadFile('index.html');
 
+  // 처음엔 빈(투명) 영역으로 클릭이 통과하도록 설정.
+  // 실제 탭/패널 위에 마우스가 오면 렌더러가 false로 바꿔줌.
+  win.setIgnoreMouseEvents(true, { forward: true });
+
   win.on('blur', () => {
     if (win && !win.isDestroyed()) win.webContents.send('window-blur');
   });
@@ -122,6 +126,13 @@ ipcMain.on('set-layout', (_e, payload) => {
   const { side, width } = payload || {};
   currentSide = side || 'right';
   positionWindow(width || COLLAPSED_WIDTH);
+});
+
+// 빈 영역 클릭 통과 토글 (true = 통과, false = 입력 받음)
+ipcMain.on('set-ignore-mouse', (_e, ignore) => {
+  if (!win || win.isDestroyed()) return;
+  if (ignore) win.setIgnoreMouseEvents(true, { forward: true });
+  else win.setIgnoreMouseEvents(false);
 });
 
 ipcMain.on('quit-app', () => app.quit());
