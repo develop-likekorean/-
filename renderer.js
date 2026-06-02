@@ -23,6 +23,7 @@ const noteView = document.getElementById('note-view');
 const settingsView = document.getElementById('settings-view');
 const titleEl = document.getElementById('note-title');
 const bodyEl = document.getElementById('note-body');
+const formatBar = document.getElementById('format-bar');
 const urlEl = document.getElementById('note-url');
 const webEl = document.getElementById('note-web');
 const clearUrlBtn = document.getElementById('btn-clear-url');
@@ -204,7 +205,8 @@ function loadIntoPanel(id) {
   if (!note) return;
   titleEl.value = note.title || '';
   urlEl.value = note.url || '';
-  bodyEl.value = note.body || '';
+  const b = note.body || '';
+  bodyEl.innerHTML = /<[a-z][\s\S]*>/i.test(b) ? b : b.replace(/\n/g, '<br>'); // 옛 일반 텍스트도 줄바꿈 유지
   markSelectedSwatch(note.color);
   if (customPicker && /^#[0-9a-fA-F]{6}$/.test(note.color)) customPicker.value = note.color;
   panelInner.style.setProperty('--accent', note.color);
@@ -224,6 +226,7 @@ function renderContent(note) {
   clearUrlBtn.classList.toggle('hidden', !hasUrl);
   if (hasUrl) {
     bodyEl.classList.add('hidden');
+    formatBar.classList.add('hidden');
     webEl.classList.remove('hidden');
     const u = normalizeUrl(note.url);
     if (webEl.getAttribute('src') !== u) webEl.setAttribute('src', u);
@@ -231,6 +234,7 @@ function renderContent(note) {
     webEl.classList.add('hidden');
     webEl.removeAttribute('src');
     bodyEl.classList.remove('hidden');
+    formatBar.classList.remove('hidden');
   }
 }
 
@@ -284,8 +288,26 @@ titleEl.addEventListener('input', () => {
 bodyEl.addEventListener('input', () => {
   const note = currentNote();
   if (!note) return;
-  note.body = bodyEl.value;
+  note.body = bodyEl.innerHTML;
   saveNow();
+});
+
+// 굵게: 버튼 + 단축키(Ctrl/⌘+B)
+function applyBold() {
+  bodyEl.focus();
+  document.execCommand('bold');
+  const note = currentNote();
+  if (note) { note.body = bodyEl.innerHTML; saveNow(); }
+}
+document.getElementById('btn-bold').addEventListener('mousedown', (e) => {
+  e.preventDefault(); // 에디터 선택 유지
+  applyBold();
+});
+bodyEl.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'B')) {
+    e.preventDefault();
+    applyBold();
+  }
 });
 
 // 링크: 입력 중엔 저장만, 다 입력하면(엔터/포커스 해제) 페이지 띄우고 너비 조정

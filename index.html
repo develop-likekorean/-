@@ -29,7 +29,10 @@
             <button id="btn-clear-url" class="mini-btn hidden" title="링크 지우기">✕</button>
           </div>
 
-          <textarea id="note-body" placeholder="여기에 메모를 적어보세요..."></textarea>
+          <div id="format-bar">
+            <button id="btn-bold" title="굵게 (Ctrl/⌘+B)">B</button>
+          </div>
+          <div id="note-body" contenteditable="true" data-placeholder="여기에 메모를 적어보세요..."></div>
           <webview id="note-web" class="hidden" partition="persist:bbaekkom" allowpopups></webview>
 
           <footer class="panel-footer">
