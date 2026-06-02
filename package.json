@@ -1,6 +1,6 @@
 {
   "name": "bbaekkom-index",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "빼꼼 인덱스 - 모니터 가장자리에 빼꼼 튀어나오는 디지털 메모 인덱스",
   "main": "main.js",
   "author": "made in people",
@@ -17,7 +17,7 @@
     "copyright": "Copyright © 2026 made in people",
     "afterPack": "build/after-pack.js",
     "publish": [
-      { "provider": "github", "owner": "develop-likekorean", "repo": "-" }
+      { "provider": "github", "owner": "develop-likekorean", "repo": "-", "releaseType": "release" }
     ],
     "files": [
       "main.js",
