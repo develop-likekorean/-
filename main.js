@@ -21,7 +21,7 @@ function defaultNotes() {
   return [{ id: 't1', title: '', color: '#FFE08A', body: '', url: '' }];
 }
 function defaultSettings() {
-  return { mode: 'auto', pinned: false, autoLaunch: false, side: 'right', size: 'medium', opacity: 1, memoWidth: 400, linkWidth: 600 };
+  return { mode: 'auto', pinned: false, autoLaunch: false, side: 'right', size: 'medium', opacity: 1 };
 }
 
 function loadNotes() {

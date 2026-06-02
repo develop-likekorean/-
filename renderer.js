@@ -5,11 +5,15 @@ const PALETTE = [
 ];
 
 const SIZE_COL = { large: 54, medium: 44, small: 36 }; // 접혔을 때(탭 기둥) 너비
-const MIN_W = 260;    // 패널 최소 너비
-const MAX_W = 1000;   // 패널 최대 너비
+const MIN_W = 240, MAX_W = 1000;   // 패널 너비 한계
+const MIN_H = 150;                 // 패널 높이 최소
+// 새 메모 기본 크기(작게). 메모마다 따로 저장됨. (0 = 전체 높이)
+const DEF_MEMO_W = 320, DEF_MEMO_H = 300;
+const DEF_LINK_W = 600, DEF_LINK_H = 0;
+const SETTINGS_W = 360;
 
 let notes = [];
-let settings = { mode: 'auto', pinned: false, autoLaunch: false, side: 'right', size: 'medium', opacity: 1, memoWidth: 400, linkWidth: 600 };
+let settings = { mode: 'auto', pinned: false, autoLaunch: false, side: 'right', size: 'medium', opacity: 1 };
 let lastWidth = 44;
 let activeId = null;
 let view = 'note'; // 'note' | 'settings'
@@ -23,7 +27,7 @@ const noteView = document.getElementById('note-view');
 const settingsView = document.getElementById('settings-view');
 const titleEl = document.getElementById('note-title');
 const bodyEl = document.getElementById('note-body');
-const formatBar = document.getElementById('format-bar');
+let boldBtn = null;
 const urlEl = document.getElementById('note-url');
 const webEl = document.getElementById('note-web');
 const clearUrlBtn = document.getElementById('btn-clear-url');
@@ -33,6 +37,8 @@ const btnPin = document.getElementById('btn-pin');
 const btnCollapse = document.getElementById('btn-collapse');
 const btnSettingsClose = document.getElementById('btn-settings-close');
 const panelInner = document.getElementById('panel-inner');
+const panelEl = document.getElementById('panel');
+const resizeHandleV = document.getElementById('resize-handle-v');
 
 // ---------- 초기화 ----------
 async function init() {
@@ -70,12 +76,21 @@ function applyOpacity() {
 }
 
 function expandedWidth() {
+  if (view !== 'note') return SETTINGS_W;
+  const n = currentNote();
+  if (n && n.url && n.url.trim()) return n.width || DEF_LINK_W;
+  return (n && n.width) || DEF_MEMO_W;
+}
+
+// 메모 카드 높이 적용 (0 = 전체 높이). 메모마다 따로 저장됨.
+function applyPanelHeight() {
+  let h = 0;
   if (view === 'note') {
     const n = currentNote();
-    if (n && n.url && n.url.trim()) return settings.linkWidth || 600;
-    return settings.memoWidth || 400;
+    if (n && n.url && n.url.trim()) h = (n.height == null ? DEF_LINK_H : n.height);
+    else h = (n && n.height != null) ? n.height : DEF_MEMO_H;
   }
-  return settings.memoWidth || 400;
+  panelInner.style.height = (h && h > 0) ? h + 'px' : '';
 }
 
 // ---------- 레이아웃(창 위치/너비) ----------
@@ -179,6 +194,14 @@ function buildColorSwatches() {
   customPicker.addEventListener('input', () => setColor(customPicker.value));
   custom.appendChild(customPicker);
   colorRow.appendChild(custom);
+
+  // 굵게(B) 버튼 — 색상 줄 오른쪽 끝에
+  boldBtn = document.createElement('button');
+  boldBtn.id = 'btn-bold';
+  boldBtn.textContent = 'B';
+  boldBtn.title = '굵게 (Ctrl/⌘+B)';
+  boldBtn.addEventListener('mousedown', (e) => { e.preventDefault(); applyBold(); });
+  colorRow.appendChild(boldBtn);
 }
 function markSelectedSwatch(color) {
   colorRow.querySelectorAll('.swatch').forEach((s) => {
@@ -226,7 +249,7 @@ function renderContent(note) {
   clearUrlBtn.classList.toggle('hidden', !hasUrl);
   if (hasUrl) {
     bodyEl.classList.add('hidden');
-    formatBar.classList.add('hidden');
+    if (boldBtn) boldBtn.classList.add('hidden');
     webEl.classList.remove('hidden');
     const u = normalizeUrl(note.url);
     if (webEl.getAttribute('src') !== u) webEl.setAttribute('src', u);
@@ -234,8 +257,9 @@ function renderContent(note) {
     webEl.classList.add('hidden');
     webEl.removeAttribute('src');
     bodyEl.classList.remove('hidden');
-    formatBar.classList.remove('hidden');
+    if (boldBtn) boldBtn.classList.remove('hidden');
   }
+  applyPanelHeight();
 }
 
 function showNoteView() {
@@ -248,6 +272,7 @@ function expand() {
   app.classList.remove('collapsed');
   app.classList.add('expanded');
   applyLayout();
+  applyPanelHeight();
   setIgnoreMouse(false); // 펼치면 패널 전체가 입력을 받음
 }
 function collapse() {
@@ -299,10 +324,6 @@ function applyBold() {
   const note = currentNote();
   if (note) { note.body = bodyEl.innerHTML; saveNow(); }
 }
-document.getElementById('btn-bold').addEventListener('mousedown', (e) => {
-  e.preventDefault(); // 에디터 선택 유지
-  applyBold();
-});
 bodyEl.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'B')) {
     e.preventDefault();
@@ -490,11 +511,35 @@ resizeHandle.addEventListener('pointerup', (e) => {
   if (!resizing) return;
   resizing = false;
   try { resizeHandle.releasePointerCapture(e.pointerId); } catch (err) {}
-  // 메모/링크 너비를 각각 기억
   const n = currentNote();
-  if (view === 'note' && n && n.url && n.url.trim()) settings.linkWidth = lastWidth;
-  else settings.memoWidth = lastWidth;
-  saveSettingsNow();
+  if (view === 'note' && n) { n.width = lastWidth; saveNow(); } // 이 메모의 너비 저장
+});
+
+// ---------- 패널 높이 마우스로 조절 ----------
+let vResizing = false, vStartY = 0, vStartH = 0;
+resizeHandleV.addEventListener('pointerdown', (e) => {
+  if (!app.classList.contains('expanded')) return;
+  vResizing = true;
+  vStartY = e.screenY;
+  vStartH = panelInner.offsetHeight;
+  resizeHandleV.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+resizeHandleV.addEventListener('pointermove', (e) => {
+  if (!vResizing) return;
+  const maxH = panelEl.clientHeight - 28;
+  const h = Math.max(MIN_H, Math.min(maxH, Math.round(vStartH + (e.screenY - vStartY))));
+  panelInner.style.height = h + 'px';
+});
+resizeHandleV.addEventListener('pointerup', (e) => {
+  if (!vResizing) return;
+  vResizing = false;
+  try { resizeHandleV.releasePointerCapture(e.pointerId); } catch (err) {}
+  const maxH = panelEl.clientHeight - 28;
+  const h = panelInner.offsetHeight;
+  const store = (h >= maxH - 2) ? 0 : h; // 거의 꽉 차면 '전체'로 저장
+  const n = currentNote();
+  if (view === 'note' && n) { n.height = store; saveNow(); } // 이 메모의 높이 저장
 });
 
 // ---------- 빈 영역 클릭 통과 (실제 탭/패널 위에서만 입력 받기) ----------
