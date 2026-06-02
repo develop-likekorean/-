@@ -16,6 +16,9 @@
     "productName": "빼꼼 인덱스",
     "copyright": "Copyright © 2026 made in people",
     "afterPack": "build/after-pack.js",
+    "publish": [
+      { "provider": "github", "owner": "develop-likekorean", "repo": "-" }
+    ],
     "files": [
       "main.js",
       "preload.js",
@@ -58,6 +61,9 @@
     "directories": {
       "output": "dist"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
   },
   "devDependencies": {
     "electron": "^31.0.0",

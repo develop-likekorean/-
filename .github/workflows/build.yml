@@ -1,17 +1,20 @@
 name: 빼꼼 인덱스 빌드
 
 # 실행 시점:
-#  - GitHub 사이트의 Actions 탭에서 "Run workflow" 버튼으로 수동 실행
-#  - main 브랜치에 코드가 올라올 때 자동 실행
-#  - v1.0.0 같은 태그를 올리면 자동 실행 + 릴리스에 파일 첨부
+#  - Actions 탭에서 "Run workflow" 수동 실행
+#  - main/master 브랜치 푸시 → 빌드 후 설치파일을 Artifacts로
+#  - v1.0.1 같은 태그 푸시 → 빌드 + GitHub Releases에 게시(자동 업데이트용)
 on:
   workflow_dispatch:
   push:
     branches: [main, master]
     tags: ['v*']
 
+permissions:
+  contents: write
+
 jobs:
-  # ---------- 윈도우 설치파일(.exe) ----------
+  # ---------- 윈도우 (.exe + 자동 업데이트 게시) ----------
   build-windows:
     runs-on: windows-latest
     steps:
@@ -21,16 +24,25 @@ jobs:
           node-version: 20
       - name: 필요한 파일 설치
         run: npm install
-      - name: 윈도우 앱 빌드
-        run: npm run build:win
+      - name: 빌드 (태그면 Releases에 게시)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ($env:GITHUB_REF -like 'refs/tags/*') {
+            npx electron-builder --win --publish always
+          } else {
+            npm run build:win
+          }
       - name: 완성파일 업로드
         uses: actions/upload-artifact@v4
         with:
           name: windows-exe
           path: dist/*.exe
 
-  # ---------- 맥 설치파일(.dmg) ----------
+  # ---------- 맥 (.dmg) ----------
   build-mac:
+    needs: build-windows
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,28 +51,18 @@ jobs:
           node-version: 20
       - name: 필요한 파일 설치
         run: npm install
-      - name: 맥 앱 빌드
-        run: npm run build:mac
+      - name: 빌드 (태그면 Releases에 게시)
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            npx electron-builder --mac --publish always
+          else
+            npm run build:mac
+          fi
       - name: 완성파일 업로드
         uses: actions/upload-artifact@v4
         with:
           name: mac-dmg
           path: dist/*.dmg
-
-  # ---------- 태그(vX.X.X)로 올릴 때만: 릴리스에 자동 첨부 ----------
-  release:
-    needs: [build-windows, build-mac]
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      - name: 릴리스 만들기
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/**/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
