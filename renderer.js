@@ -13,6 +13,7 @@ let settings = { mode: 'auto', pinned: false, autoLaunch: false, side: 'right', 
 let activeId = null;
 let view = 'note'; // 'note' | 'settings'
 let ignoreBlur = false;
+let dragSrcId = null;
 
 const app = document.getElementById('app');
 const tabsEl = document.getElementById('tabs');
@@ -80,6 +81,30 @@ function renderTabs() {
     tab.textContent = label;
     tab.title = label;
     tab.addEventListener('click', () => onTabClick(note.id));
+
+    // 드래그로 순서 변경
+    tab.draggable = true;
+    tab.addEventListener('dragstart', (e) => {
+      dragSrcId = note.id;
+      e.dataTransfer.effectAllowed = 'move';
+      tab.classList.add('dragging');
+    });
+    tab.addEventListener('dragend', () => {
+      tab.classList.remove('dragging');
+      document.querySelectorAll('.tab.drag-over').forEach((t) => t.classList.remove('drag-over'));
+    });
+    tab.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (note.id !== dragSrcId) tab.classList.add('drag-over');
+    });
+    tab.addEventListener('dragleave', () => tab.classList.remove('drag-over'));
+    tab.addEventListener('drop', (e) => {
+      e.preventDefault();
+      tab.classList.remove('drag-over');
+      reorderNotes(dragSrcId, note.id);
+    });
+
     tabsEl.appendChild(tab);
   });
 
@@ -100,6 +125,18 @@ function renderTabs() {
   gear.title = '설정';
   gear.addEventListener('click', openSettings);
   tabsEl.appendChild(gear);
+}
+
+// 드래그한 탭(src)을 대상 탭(target) 자리로 옮기고 나머지를 밀어냄
+function reorderNotes(srcId, targetId) {
+  if (!srcId || srcId === targetId) return;
+  const srcIdx = notes.findIndex((n) => n.id === srcId);
+  const tgtIdx = notes.findIndex((n) => n.id === targetId);
+  if (srcIdx < 0 || tgtIdx < 0) return;
+  const [moved] = notes.splice(srcIdx, 1);
+  notes.splice(tgtIdx, 0, moved);
+  saveNow();
+  renderTabs();
 }
 
 // ---------- 색상 팔레트 ----------
