@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   getNotes: () => ipcRenderer.invoke('get-notes'),
   saveNotes: (notes) => ipcRenderer.invoke('save-notes', notes),
+  getVersion: () => ipcRenderer.invoke('get-version'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
   setLayout: (side, width) => ipcRenderer.send('set-layout', { side, width }),

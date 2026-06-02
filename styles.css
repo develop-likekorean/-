@@ -449,6 +449,13 @@ html, body {
   color: #3a3328;
 }
 
+.version-line {
+  text-align: center;
+  font-size: 11px;
+  color: #b3aa98;
+  padding: 6px 0 2px;
+}
+
 .slider-row {
   display: flex;
   align-items: center;

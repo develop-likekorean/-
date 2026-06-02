@@ -116,6 +116,7 @@ function createWindow() {
 // ---- 렌더러와의 통신 ----
 ipcMain.handle('get-notes', () => loadNotes());
 ipcMain.handle('save-notes', (_e, notes) => saveNotes(notes));
+ipcMain.handle('get-version', () => app.getVersion());
 ipcMain.handle('get-settings', () => loadSettings());
 ipcMain.handle('save-settings', (_e, settings) => {
   saveSettings(settings);

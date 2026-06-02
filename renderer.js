@@ -42,9 +42,15 @@ const panelEl = document.getElementById('panel');
 const resizeHandleV = document.getElementById('resize-handle-v');
 
 // ---------- 초기화 ----------
+const VERSION_LABEL = '설똥의 헛짓거리 v2';
+
 async function init() {
   settings = await window.api.getSettings();
   notes = await window.api.getNotes();
+  try {
+    const ver = await window.api.getVersion();
+    document.getElementById('version-line').textContent = `${VERSION_LABEL}  ·  v${ver}`;
+  } catch (e) {}
   buildColorSwatches();
   applySideClass();
   applySizeClass();
