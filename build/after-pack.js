@@ -18,11 +18,13 @@ exports.default = async function afterPack(context) {
 
   const entitlements = path.join(__dirname, 'entitlements.mac.plist');
 
+  // 하드닝 런타임(--options runtime)을 켜지 않습니다.
+  // 그래야 Electron(V8)의 JIT가 아무 제한 없이 동작해서, 서명 없는 배포에서도
+  // "실행 즉시 크래시"가 가장 확실하게 사라집니다.
   const sign = (target) => {
     execFileSync('codesign', [
       '--force',
       '--timestamp=none',
-      '--options', 'runtime',
       '--entitlements', entitlements,
       '--sign', '-',
       target
