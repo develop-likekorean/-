@@ -2,7 +2,8 @@ const { app, BrowserWindow, screen, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-const COLLAPSED_WIDTH = 54;
+const COLLAPSED_WIDTH = 44; // 기본(보통) 너비, 시작 한 프레임용 폴백
+const SIZE_COL = { large: 54, medium: 44, small: 36 };
 
 let win = null;
 let tray = null;
@@ -20,7 +21,7 @@ function defaultNotes() {
   return [{ id: 't1', title: '', color: '#FFE08A', body: '', url: '' }];
 }
 function defaultSettings() {
-  return { mode: 'auto', pinned: false, autoLaunch: false, side: 'right' };
+  return { mode: 'auto', pinned: false, autoLaunch: false, side: 'right', size: 'medium' };
 }
 
 function loadNotes() {
@@ -94,8 +95,9 @@ function createWindow() {
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setAlwaysOnTop(true, 'screen-saver');
 
-  currentSide = loadSettings().side || 'right';
-  positionWindow(COLLAPSED_WIDTH);
+  const s = loadSettings();
+  currentSide = s.side || 'right';
+  positionWindow(SIZE_COL[s.size] || COLLAPSED_WIDTH);
   win.loadFile('index.html');
 
   win.on('blur', () => {

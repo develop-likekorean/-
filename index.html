@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div id="app" class="collapsed side-right">
+  <div id="app" class="collapsed side-right size-medium">
     <!-- 펼쳐지는 패널 -->
     <section id="panel">
       <div id="panel-inner">
@@ -43,6 +43,22 @@
             <h2>설정</h2>
             <button id="btn-settings-close" class="icon-btn" title="닫기">›</button>
           </header>
+
+          <div class="setting-block">
+            <p class="setting-title">인덱스 크기</p>
+            <label class="mode-option">
+              <input type="radio" name="size" value="large" />
+              <span><b>크게</b><small>탭이 크고 글씨도 큼.</small></span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="size" value="medium" />
+              <span><b>보통</b><small>기본값. 적당한 크기.</small></span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="size" value="small" />
+              <span><b>작게</b><small>얇고 화면을 덜 차지해요.</small></span>
+            </label>
+          </div>
 
           <div class="setting-block">
             <p class="setting-title">인덱스 위치</p>

@@ -7,8 +7,16 @@
 }
 
 :root {
-  --tab-col-width: 54px;
+  --tab-col: 44px;
+  --tab-w: 38px;
+  --tab-h: 64px;
+  --tab-font: 13px;
+  --tab-add-h: 40px;
+  --tab-gear: 30px;
 }
+#app.size-large  { --tab-col: 54px; --tab-w: 46px; --tab-h: 78px; --tab-font: 14px; --tab-add-h: 46px; --tab-gear: 32px; }
+#app.size-medium { --tab-col: 44px; --tab-w: 38px; --tab-h: 64px; --tab-font: 13px; --tab-add-h: 40px; --tab-gear: 30px; }
+#app.size-small  { --tab-col: 36px; --tab-w: 30px; --tab-h: 52px; --tab-font: 11px; --tab-add-h: 34px; --tab-gear: 28px; }
 
 html, body {
   width: 100%;
@@ -32,8 +40,8 @@ html, body {
 
 /* ---------- 탭 기둥 ---------- */
 #tabs {
-  width: var(--tab-col-width);
-  min-width: var(--tab-col-width);
+  width: var(--tab-col);
+  min-width: var(--tab-col);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -45,8 +53,8 @@ html, body {
 #app.side-left #tabs { align-items: flex-start; }
 
 .tab {
-  width: 46px;
-  min-height: 78px;
+  width: var(--tab-w);
+  min-height: var(--tab-h);
   border: none;
   border-radius: 12px 0 0 12px;
   cursor: pointer;
@@ -55,7 +63,7 @@ html, body {
   justify-content: center;
   writing-mode: vertical-rl;
   text-orientation: upright;
-  font-size: 14px;
+  font-size: var(--tab-font);
   font-weight: 700;
   letter-spacing: 2px;
   color: #4a4030;
@@ -65,8 +73,8 @@ html, body {
   position: relative;
   right: -6px;
 }
-.tab:hover { width: 52px; right: 0; }
-.tab.active { width: 54px; right: 0; box-shadow: -3px 2px 10px rgba(0, 0, 0, 0.25); }
+.tab:hover { width: var(--tab-col); right: 0; }
+.tab.active { width: var(--tab-col); right: 0; box-shadow: -3px 2px 10px rgba(0, 0, 0, 0.25); }
 
 #app.side-left .tab {
   border-radius: 0 12px 12px 0;
@@ -78,8 +86,8 @@ html, body {
 #app.side-left .tab.active { left: 0; box-shadow: 3px 2px 10px rgba(0, 0, 0, 0.25); }
 
 .tab-add {
-  width: 46px;
-  min-height: 46px;
+  width: var(--tab-w);
+  min-height: var(--tab-add-h);
   border-radius: 12px 0 0 12px;
   border: 2px dashed rgba(120, 120, 120, 0.6);
   background: rgba(255, 255, 255, 0.7);
@@ -101,8 +109,8 @@ html, body {
 .spacer { flex: 1; }
 
 .tab-gear {
-  width: 32px;
-  height: 32px;
+  width: var(--tab-gear);
+  height: var(--tab-gear);
   border-radius: 8px 0 0 8px;
   border: none;
   background: rgba(150, 150, 150, 0.55);

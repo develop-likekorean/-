@@ -4,12 +4,12 @@ const PALETTE = [
   '#FFE08A', '#F7B5C4', '#A8D8EA', '#B5E7A0', '#FFC9A3', '#D6C8F0', '#FFFFFF'
 ];
 
-const COLLAPSED_W = 54;
+const SIZE_COL = { large: 54, medium: 44, small: 36 }; // 접혔을 때(탭 기둥) 너비
 const MEMO_W = 400;   // 메모 펼침 너비
 const LINK_W = 600;   // 링크(웹페이지) 펼침 너비 — 더 넓게
 
 let notes = [];
-let settings = { mode: 'auto', pinned: false, autoLaunch: false, side: 'right' };
+let settings = { mode: 'auto', pinned: false, autoLaunch: false, side: 'right', size: 'medium' };
 let activeId = null;
 let view = 'note'; // 'note' | 'settings'
 let ignoreBlur = false;
@@ -36,6 +36,7 @@ async function init() {
   notes = await window.api.getNotes();
   buildColorSwatches();
   applySideClass();
+  applySizeClass();
   applySettingsUI();
   renderTabs();
   collapse();
@@ -49,9 +50,14 @@ function applySideClass() {
   btnSettingsClose.textContent = arrow;
 }
 
+function applySizeClass() {
+  app.classList.remove('size-large', 'size-medium', 'size-small');
+  app.classList.add('size-' + (settings.size || 'medium'));
+}
+
 // ---------- 레이아웃(창 위치/너비) ----------
 function applyLayout() {
-  let width = COLLAPSED_W;
+  let width = SIZE_COL[settings.size] || 44;
   if (app.classList.contains('expanded')) {
     if (view === 'note') {
       const n = currentNote();
@@ -311,6 +317,15 @@ document.querySelectorAll('input[name="side"]').forEach((radio) => {
   });
 });
 
+document.querySelectorAll('input[name="size"]').forEach((radio) => {
+  radio.addEventListener('change', () => {
+    settings.size = radio.value;
+    applySizeClass();
+    applyLayout(); // 즉시 너비 반영
+    saveSettingsNow();
+  });
+});
+
 document.getElementById('chk-autolaunch').addEventListener('change', (e) => {
   settings.autoLaunch = e.target.checked;
   saveSettingsNow();
@@ -324,6 +339,7 @@ document.getElementById('btn-quit').addEventListener('click', () => {
 function applySettingsUI() {
   document.querySelectorAll('input[name="mode"]').forEach((r) => { r.checked = r.value === settings.mode; });
   document.querySelectorAll('input[name="side"]').forEach((r) => { r.checked = r.value === settings.side; });
+  document.querySelectorAll('input[name="size"]').forEach((r) => { r.checked = r.value === settings.size; });
   document.getElementById('chk-autolaunch').checked = !!settings.autoLaunch;
   if (settings.mode === 'always') {
     btnPin.classList.add('hidden');
