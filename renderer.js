@@ -123,7 +123,7 @@ function renderTabs() {
     if (!gripDragging) return;
     const off = Math.max(8, Math.min(window.innerHeight - 160, Math.round(gripStartOffset + (e.screenY - gripStartY))));
     settings.tabOffset = off;
-    tabsEl.style.paddingTop = off + 'px';
+    applyTabOffset(); // 탭 + 메모 카드 같이 이동
   });
   grip.addEventListener('pointerup', (e) => {
     if (!gripDragging) return;
@@ -198,8 +198,16 @@ function renderTabs() {
 }
 
 function applyTabOffset() {
-  if (settings.tabOffset != null) tabsEl.style.paddingTop = settings.tabOffset + 'px';
-  else tabsEl.style.paddingTop = '';
+  let off;
+  if (settings.tabOffset != null) {
+    off = settings.tabOffset;
+  } else {
+    const th = parseInt(getComputedStyle(app).getPropertyValue('--tab-h')) || 64;
+    off = th + 20; // 기본: 탭 한 칸 아래
+  }
+  // 탭 기둥과 메모 카드를 같은 높이에서 시작하도록 맞춤
+  tabsEl.style.paddingTop = off + 'px';
+  panelEl.style.paddingTop = off + 'px';
 }
 
 // 드래그한 탭(src)을 대상 탭(target) 자리로 옮기고 나머지를 밀어냄
@@ -485,6 +493,7 @@ document.querySelectorAll('input[name="size"]').forEach((radio) => {
   radio.addEventListener('change', () => {
     settings.size = radio.value;
     applySizeClass();
+    applyTabOffset(); // 크기 바뀌면 기본 위치도 갱신
     applyLayout(); // 즉시 너비 반영
     saveSettingsNow();
   });
