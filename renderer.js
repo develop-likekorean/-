@@ -5,15 +5,17 @@ const PALETTE = [
 ];
 
 const SIZE_COL = { large: 54, medium: 44, small: 36 }; // 접혔을 때(탭 기둥) 너비
-const MEMO_W = 400;   // 메모 펼침 너비
-const LINK_W = 600;   // 링크(웹페이지) 펼침 너비 — 더 넓게
+const MIN_W = 260;    // 패널 최소 너비
+const MAX_W = 1000;   // 패널 최대 너비
 
 let notes = [];
-let settings = { mode: 'auto', pinned: false, autoLaunch: false, side: 'right', size: 'medium' };
+let settings = { mode: 'auto', pinned: false, autoLaunch: false, side: 'right', size: 'medium', opacity: 1, memoWidth: 400, linkWidth: 600 };
+let lastWidth = 44;
 let activeId = null;
 let view = 'note'; // 'note' | 'settings'
 let ignoreBlur = false;
 let dragSrcId = null;
+let customPicker = null;
 
 const app = document.getElementById('app');
 const tabsEl = document.getElementById('tabs');
@@ -38,6 +40,7 @@ async function init() {
   buildColorSwatches();
   applySideClass();
   applySizeClass();
+  applyOpacity();
   applySettingsUI();
   renderTabs();
   collapse();
@@ -56,17 +59,28 @@ function applySizeClass() {
   app.classList.add('size-' + (settings.size || 'medium'));
 }
 
+function applyOpacity() {
+  const o = settings.opacity == null ? 1 : settings.opacity;
+  app.style.setProperty('--ui-opacity', o);
+  const range = document.getElementById('opacity-range');
+  const val = document.getElementById('opacity-val');
+  if (range) range.value = Math.round(o * 100);
+  if (val) val.textContent = Math.round(o * 100) + '%';
+}
+
+function expandedWidth() {
+  if (view === 'note') {
+    const n = currentNote();
+    if (n && n.url && n.url.trim()) return settings.linkWidth || 600;
+    return settings.memoWidth || 400;
+  }
+  return settings.memoWidth || 400;
+}
+
 // ---------- 레이아웃(창 위치/너비) ----------
 function applyLayout() {
-  let width = SIZE_COL[settings.size] || 44;
-  if (app.classList.contains('expanded')) {
-    if (view === 'note') {
-      const n = currentNote();
-      width = (n && n.url && n.url.trim()) ? LINK_W : MEMO_W;
-    } else {
-      width = MEMO_W;
-    }
-  }
+  const width = app.classList.contains('expanded') ? expandedWidth() : (SIZE_COL[settings.size] || 44);
+  lastWidth = width;
   window.api.setLayout(settings.side, width);
 }
 
@@ -77,9 +91,12 @@ function renderTabs() {
     const tab = document.createElement('button');
     tab.className = 'tab' + (note.id === activeId ? ' active' : '');
     tab.style.background = note.color;
-    const label = note.title && note.title.trim() ? note.title : String(i + 1);
+    const full = note.title && note.title.trim() ? note.title : String(i + 1);
+    const isActive = note.id === activeId;
+    // 8글자 이상이면 앞부분만(…), 활성화된 탭은 전체 표시
+    const label = (!isActive && full.length > 8) ? full.slice(0, 8) + '…' : full;
     tab.textContent = label;
-    tab.title = label;
+    tab.title = full;
     tab.addEventListener('click', () => onTabClick(note.id));
 
     // 드래그로 순서 변경
@@ -150,6 +167,17 @@ function buildColorSwatches() {
     s.addEventListener('click', () => setColor(color));
     colorRow.appendChild(s);
   });
+
+  // 색상 직접 선택 (무지개 동그라미 → 누르면 색상표 열림)
+  const custom = document.createElement('label');
+  custom.className = 'swatch custom';
+  custom.title = '색상 직접 선택';
+  customPicker = document.createElement('input');
+  customPicker.type = 'color';
+  customPicker.className = 'color-picker';
+  customPicker.addEventListener('input', () => setColor(customPicker.value));
+  custom.appendChild(customPicker);
+  colorRow.appendChild(custom);
 }
 function markSelectedSwatch(color) {
   colorRow.querySelectorAll('.swatch').forEach((s) => {
@@ -178,6 +206,7 @@ function loadIntoPanel(id) {
   urlEl.value = note.url || '';
   bodyEl.value = note.body || '';
   markSelectedSwatch(note.color);
+  if (customPicker && /^#[0-9a-fA-F]{6}$/.test(note.color)) customPicker.value = note.color;
   panelInner.style.setProperty('--accent', note.color);
   renderContent(note);
 }
@@ -365,6 +394,12 @@ document.querySelectorAll('input[name="size"]').forEach((radio) => {
   });
 });
 
+document.getElementById('opacity-range').addEventListener('input', (e) => {
+  settings.opacity = Math.max(0.3, Math.min(1, Number(e.target.value) / 100));
+  applyOpacity();
+  saveSettingsNow();
+});
+
 document.getElementById('chk-autolaunch').addEventListener('change', (e) => {
   settings.autoLaunch = e.target.checked;
   saveSettingsNow();
@@ -379,6 +414,7 @@ function applySettingsUI() {
   document.querySelectorAll('input[name="mode"]').forEach((r) => { r.checked = r.value === settings.mode; });
   document.querySelectorAll('input[name="side"]').forEach((r) => { r.checked = r.value === settings.side; });
   document.querySelectorAll('input[name="size"]').forEach((r) => { r.checked = r.value === settings.size; });
+  applyOpacity();
   document.getElementById('chk-autolaunch').checked = !!settings.autoLaunch;
   if (settings.mode === 'always') {
     btnPin.classList.add('hidden');
@@ -399,6 +435,45 @@ function guardBlur() {
   ignoreBlur = true;
   setTimeout(() => { ignoreBlur = false; }, 500);
 }
+
+// ---------- 패널 너비 마우스로 조절 ----------
+const resizeHandle = document.getElementById('resize-handle');
+let resizing = false, rzStartX = 0, rzStartW = 0, rzPending = null, rzRaf = null;
+
+function liveResize(w) {
+  rzPending = w;
+  if (rzRaf) return;
+  rzRaf = requestAnimationFrame(() => {
+    rzRaf = null;
+    lastWidth = rzPending;
+    window.api.setLayout(settings.side, rzPending);
+  });
+}
+
+resizeHandle.addEventListener('pointerdown', (e) => {
+  if (!app.classList.contains('expanded')) return;
+  resizing = true;
+  rzStartX = e.screenX;
+  rzStartW = lastWidth;
+  resizeHandle.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+resizeHandle.addEventListener('pointermove', (e) => {
+  if (!resizing) return;
+  const delta = settings.side === 'left' ? (e.screenX - rzStartX) : (rzStartX - e.screenX);
+  const w = Math.max(MIN_W, Math.min(MAX_W, Math.round(rzStartW + delta)));
+  liveResize(w);
+});
+resizeHandle.addEventListener('pointerup', (e) => {
+  if (!resizing) return;
+  resizing = false;
+  try { resizeHandle.releasePointerCapture(e.pointerId); } catch (err) {}
+  // 메모/링크 너비를 각각 기억
+  const n = currentNote();
+  if (view === 'note' && n && n.url && n.url.trim()) settings.linkWidth = lastWidth;
+  else settings.memoWidth = lastWidth;
+  saveSettingsNow();
+});
 
 // ---------- 빈 영역 클릭 통과 (실제 탭/패널 위에서만 입력 받기) ----------
 let curIgnore = null;

@@ -10,6 +10,7 @@
   <div id="app" class="collapsed side-right size-medium">
     <!-- 펼쳐지는 패널 -->
     <section id="panel">
+      <div id="resize-handle" title="크기 조절"></div>
       <div id="panel-inner">
 
         <!-- 메모/링크 화면 -->
@@ -70,6 +71,14 @@
               <input type="radio" name="side" value="left" />
               <span><b>왼쪽</b><small>화면 왼쪽 가장자리에서 빼꼼.</small></span>
             </label>
+          </div>
+
+          <div class="setting-block">
+            <p class="setting-title">투명도</p>
+            <div class="slider-row">
+              <input type="range" id="opacity-range" min="30" max="100" step="5" value="100" />
+              <span id="opacity-val">100%</span>
+            </div>
           </div>
 
           <div class="setting-block">
