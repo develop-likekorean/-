@@ -89,6 +89,29 @@ html, body {
 #app.side-left .tab:hover { left: 0; }
 #app.side-left .tab.active { left: 0; box-shadow: 3px 2px 10px rgba(0, 0, 0, 0.25); }
 
+.tab-move {
+  width: var(--tab-w);
+  height: 15px;
+  border-radius: 8px 0 0 8px;
+  background: rgba(150, 150, 150, 0.5);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  position: relative;
+  right: -6px;
+  margin-bottom: 4px;
+  opacity: var(--ui-opacity, 1);
+  touch-action: none;
+}
+.tab-move:hover { background: rgba(120, 120, 120, 0.78); right: 0; }
+.tab-move:active { cursor: grabbing; }
+#app.side-left .tab-move { border-radius: 0 8px 8px 0; right: auto; left: -6px; }
+#app.side-left .tab-move:hover { left: 0; }
+
 .tab-add {
   width: var(--tab-w);
   min-height: var(--tab-add-h);
@@ -249,6 +272,9 @@ html, body {
 .icon-btn:hover { background: #e6e0d4; }
 #btn-collapse, #btn-settings-close { font-size: 20px; }
 #btn-pin.pinned { background: #ffe08a; color: #6b5a1f; }
+#btn-more.on { background: #e6e0d4; }
+#note-view.opts-hidden #color-row,
+#note-view.opts-hidden #link-row { display: none; }
 
 #color-row {
   display: flex;

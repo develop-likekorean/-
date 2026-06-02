@@ -13,12 +13,13 @@ const DEF_LINK_W = 600, DEF_LINK_H = 0;
 const SETTINGS_W = 360;
 
 let notes = [];
-let settings = { mode: 'auto', pinned: false, autoLaunch: false, side: 'right', size: 'medium', opacity: 1 };
+let settings = { mode: 'auto', pinned: false, autoLaunch: false, side: 'right', size: 'medium', opacity: 1, showOptions: false };
 let lastWidth = 44;
 let activeId = null;
 let view = 'note'; // 'note' | 'settings'
 let ignoreBlur = false;
 let dragSrcId = null;
+let gripDragging = false, gripStartY = 0, gripStartOffset = 0;
 let customPicker = null;
 
 const app = document.getElementById('app');
@@ -48,6 +49,7 @@ async function init() {
   applySideClass();
   applySizeClass();
   applyOpacity();
+  applyOptions();
   applySettingsUI();
   renderTabs();
   collapse();
@@ -103,6 +105,34 @@ function applyLayout() {
 // ---------- 탭 그리기 ----------
 function renderTabs() {
   tabsEl.innerHTML = '';
+
+  // 인덱스 전체 세로 위치 이동 손잡이
+  const grip = document.createElement('div');
+  grip.className = 'tab-move';
+  grip.title = '드래그해서 인덱스 위치 이동';
+  grip.textContent = '↕';
+  grip.addEventListener('pointerdown', (e) => {
+    gripDragging = true;
+    gripStartY = e.screenY;
+    gripStartOffset = parseInt(getComputedStyle(tabsEl).paddingTop) || 0;
+    grip.setPointerCapture(e.pointerId);
+    setIgnoreMouse(false);
+    e.preventDefault();
+  });
+  grip.addEventListener('pointermove', (e) => {
+    if (!gripDragging) return;
+    const off = Math.max(8, Math.min(window.innerHeight - 160, Math.round(gripStartOffset + (e.screenY - gripStartY))));
+    settings.tabOffset = off;
+    tabsEl.style.paddingTop = off + 'px';
+  });
+  grip.addEventListener('pointerup', (e) => {
+    if (!gripDragging) return;
+    gripDragging = false;
+    try { grip.releasePointerCapture(e.pointerId); } catch (err) {}
+    saveSettingsNow();
+  });
+  tabsEl.appendChild(grip);
+
   notes.forEach((note, i) => {
     const tab = document.createElement('button');
     tab.className = 'tab' + (note.id === activeId ? ' active' : '');
@@ -163,6 +193,13 @@ function renderTabs() {
   gear.title = '설정';
   gear.addEventListener('click', openSettings);
   tabsEl.appendChild(gear);
+
+  applyTabOffset();
+}
+
+function applyTabOffset() {
+  if (settings.tabOffset != null) tabsEl.style.paddingTop = settings.tabOffset + 'px';
+  else tabsEl.style.paddingTop = '';
 }
 
 // 드래그한 탭(src)을 대상 탭(target) 자리로 옮기고 나머지를 밀어냄
@@ -271,6 +308,17 @@ function showNoteView() {
   noteView.classList.remove('hidden');
   settingsView.classList.add('hidden');
 }
+
+// 색상·링크 보이기/숨기기
+function applyOptions() {
+  noteView.classList.toggle('opts-hidden', !settings.showOptions);
+  document.getElementById('btn-more').classList.toggle('on', !!settings.showOptions);
+}
+document.getElementById('btn-more').addEventListener('click', () => {
+  settings.showOptions = !settings.showOptions;
+  applyOptions();
+  saveSettingsNow();
+});
 
 // ---------- 펼치기 / 접기 ----------
 function expand() {
@@ -555,9 +603,9 @@ function setIgnoreMouse(ignore) {
   window.api.setIgnoreMouse(ignore);
 }
 // 마우스가 실제 스티커(탭)나 펼친 패널 위에 있을 때만 입력을 받음
-const INTERACTIVE = '.tab, .tab-add, .tab-gear, #panel-inner';
+const INTERACTIVE = '.tab, .tab-add, .tab-gear, .tab-move, #panel-inner';
 document.addEventListener('mousemove', (e) => {
-  if (dragSrcId || resizing || vResizing) { setIgnoreMouse(false); return; } // 드래그/리사이즈 중엔 통과 끔
+  if (dragSrcId || resizing || vResizing || gripDragging) { setIgnoreMouse(false); return; } // 드래그/리사이즈 중엔 통과 끔
   if (app.classList.contains('expanded')) { setIgnoreMouse(false); return; }
   const onContent = e.target && e.target.closest && e.target.closest(INTERACTIVE);
   setIgnoreMouse(!onContent);
