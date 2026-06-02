@@ -42,7 +42,7 @@ const panelEl = document.getElementById('panel');
 const resizeHandleV = document.getElementById('resize-handle-v');
 
 // ---------- 초기화 ----------
-const VERSION_LABEL = '설똥의 헛짓거리 v2';
+const VERSION_LABEL = '설똥의 헛짓거리';
 
 async function init() {
   settings = await window.api.getSettings();
