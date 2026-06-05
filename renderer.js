@@ -521,6 +521,27 @@ document.getElementById('btn-quit').addEventListener('click', () => {
   if (confirm('빼꼼 인덱스를 종료할까요?')) window.api.quit();
 });
 
+// ---------- 업데이트 ----------
+const updStatusEl = document.getElementById('update-status');
+const btnInstall = document.getElementById('btn-install-update');
+document.getElementById('btn-check-update').addEventListener('click', async () => {
+  updStatusEl.textContent = '확인 중...';
+  btnInstall.classList.add('hidden');
+  const r = await window.api.checkUpdate();
+  if (r.status === 'dev') updStatusEl.textContent = '소스 실행 모드예요. 껐다 켜면 항상 최신이에요.';
+  else if (r.status === 'unsupported') updStatusEl.textContent = '맥은 아직 자동 업데이트 미지원(서명 필요). 윈도우만 가능해요.';
+  else if (r.status === 'error') updStatusEl.textContent = '오류: ' + (r.message || '확인 실패');
+});
+window.api.onUpdateStatus((d) => {
+  if (d.status === 'checking') updStatusEl.textContent = '확인 중...';
+  else if (d.status === 'available') updStatusEl.textContent = `새 버전 v${d.version} 발견 — 내려받는 중...`;
+  else if (d.status === 'downloading') updStatusEl.textContent = `내려받는 중... ${d.percent}%`;
+  else if (d.status === 'downloaded') { updStatusEl.textContent = `v${d.version} 준비 완료!`; btnInstall.classList.remove('hidden'); }
+  else if (d.status === 'latest') updStatusEl.textContent = '이미 최신 버전이에요.';
+  else if (d.status === 'error') updStatusEl.textContent = '오류: ' + (d.message || '');
+});
+btnInstall.addEventListener('click', () => window.api.installUpdate());
+
 function applySettingsUI() {
   document.querySelectorAll('input[name="mode"]').forEach((r) => { r.checked = r.value === settings.mode; });
   document.querySelectorAll('input[name="side"]').forEach((r) => { r.checked = r.value === settings.side; });

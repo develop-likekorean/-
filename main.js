@@ -117,6 +117,17 @@ function createWindow() {
 ipcMain.handle('get-notes', () => loadNotes());
 ipcMain.handle('save-notes', (_e, notes) => saveNotes(notes));
 ipcMain.handle('get-version', () => app.getVersion());
+
+// 수동 업데이트 확인
+ipcMain.handle('check-update', async () => {
+  if (!app.isPackaged) return { status: 'dev' };
+  if (process.platform !== 'win32') return { status: 'unsupported' };
+  try { await getUpdater().checkForUpdates(); return { status: 'started' }; }
+  catch (e) { return { status: 'error', message: String((e && e.message) || e) }; }
+});
+ipcMain.on('install-update', () => {
+  try { if (_autoUpdater) _autoUpdater.quitAndInstall(); } catch (e) {}
+});
 ipcMain.handle('get-settings', () => loadSettings());
 ipcMain.handle('save-settings', (_e, settings) => {
   saveSettings(settings);
@@ -170,15 +181,31 @@ function createTray() {
   } catch (e) {}
 }
 
-// 윈도우 설치형 앱에서만 자동 업데이트 확인 (소스 실행/맥은 건너뜀)
+// ---- 자동 업데이트 (윈도우 설치형 앱 전용) ----
+let _autoUpdater = null;
+function getUpdater() {
+  if (_autoUpdater) return _autoUpdater;
+  const { autoUpdater } = require('electron-updater');
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  const send = (status, info) => {
+    if (win && !win.isDestroyed()) win.webContents.send('update-status', Object.assign({ status }, info || {}));
+  };
+  autoUpdater.on('checking-for-update', () => send('checking'));
+  autoUpdater.on('update-available', (i) => send('available', { version: i && i.version }));
+  autoUpdater.on('update-not-available', () => send('latest'));
+  autoUpdater.on('error', (e) => send('error', { message: String((e && e.message) || e) }));
+  autoUpdater.on('download-progress', (p) => send('downloading', { percent: Math.round((p && p.percent) || 0) }));
+  autoUpdater.on('update-downloaded', (i) => send('downloaded', { version: i && i.version }));
+  _autoUpdater = autoUpdater;
+  return autoUpdater;
+}
+
+// 시작 시 자동 확인
 function checkForUpdates() {
   if (!app.isPackaged || process.platform !== 'win32') return;
-  try {
-    const { autoUpdater } = require('electron-updater');
-    autoUpdater.checkForUpdatesAndNotify();
-  } catch (e) {
-    console.log('업데이트 확인 건너뜀:', e.message);
-  }
+  try { getUpdater().checkForUpdatesAndNotify(); }
+  catch (e) { console.log('업데이트 확인 건너뜀:', e.message); }
 }
 
 app.whenReady().then(() => {
