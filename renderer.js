@@ -618,10 +618,11 @@ function setIgnoreMouse(ignore) {
   window.api.setIgnoreMouse(ignore);
 }
 // 마우스가 실제 스티커(탭)나 펼친 패널 위에 있을 때만 입력을 받음
-const INTERACTIVE = '.tab, .tab-add, .tab-gear, .tab-move, #panel-inner';
+// 실제 메모 카드/탭/손잡이 위에서만 입력을 받고, 나머지(투명) 영역은 클릭 통과.
+// 펼친 상태에서도 동일 → 메모 위아래 빈 곳을 눌러도 통과되고 자동으로 접힘.
+const INTERACTIVE = '.tab, .tab-add, .tab-gear, .tab-move, #panel-inner, #resize-handle, #resize-handle-v';
 document.addEventListener('mousemove', (e) => {
   if (dragSrcId || resizing || vResizing || gripDragging) { setIgnoreMouse(false); return; } // 드래그/리사이즈 중엔 통과 끔
-  if (app.classList.contains('expanded')) { setIgnoreMouse(false); return; }
   const onContent = e.target && e.target.closest && e.target.closest(INTERACTIVE);
   setIgnoreMouse(!onContent);
 });
